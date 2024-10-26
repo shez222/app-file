@@ -1,10 +1,15 @@
 // components/ReviewSection.js
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ThemeContext } from '../../ThemeContext';
+import { lightTheme, darkTheme } from '../../themes';
 
 const ReviewSection = ({ productId }) => {
+  const { theme } = useContext(ThemeContext);
+  const currentTheme = theme === 'light' ? lightTheme : darkTheme;
+
   // Sample reviews data
   const reviews = [
     {
@@ -14,27 +19,20 @@ const ReviewSection = ({ productId }) => {
       comment: 'This course was extremely helpful and well-structured.',
       date: 'September 20, 2023',
     },
-    {
-      id: '2',
-      userName: 'Bob Smith',
-      rating: 4,
-      comment: 'Great content, but could use more practice problems.',
-      date: 'August 15, 2023',
-    },
-    {
-      id: '3',
-      userName: 'Carol Williams',
-      rating: 5,
-      comment: 'Absolutely loved it! The instructor was fantastic.',
-      date: 'July 10, 2023',
-    },
     // Add more reviews as needed
   ];
 
   const renderReviewItem = ({ item }) => (
-    <View style={styles.reviewItem}>
+    <View
+      style={[
+        styles.reviewItem,
+        { backgroundColor: currentTheme.cardBackground },
+      ]}
+    >
       <View style={styles.reviewHeader}>
-        <Text style={styles.userName}>{item.userName}</Text>
+        <Text style={[styles.userName, { color: currentTheme.textColor }]}>
+          {item.userName}
+        </Text>
         <View style={styles.ratingContainer}>
           {Array.from({ length: 5 }, (_, index) => (
             <Ionicons
@@ -46,21 +44,29 @@ const ReviewSection = ({ productId }) => {
           ))}
         </View>
       </View>
-      <Text style={styles.reviewDate}>{item.date}</Text>
-      <Text style={styles.reviewComment}>{item.comment}</Text>
+      <Text style={[styles.reviewDate, { color: currentTheme.textColor }]}>
+        {item.date}
+      </Text>
+      <Text style={[styles.reviewComment, { color: currentTheme.textColor }]}>
+        {item.comment}
+      </Text>
     </View>
   );
 
   return (
     <View style={styles.reviewSection}>
-      <Text style={styles.sectionTitle}>Reviews</Text>
+      <Text style={[styles.sectionTitle, { color: currentTheme.textColor }]}>
+        Reviews
+      </Text>
       <FlatList
         data={reviews}
         keyExtractor={(item) => item.id}
         renderItem={renderReviewItem}
         contentContainerStyle={styles.reviewList}
         ListEmptyComponent={
-          <Text style={styles.noReviewsText}>No reviews yet. Be the first to review!</Text>
+          <Text style={[styles.noReviewsText, { color: currentTheme.textColor }]}>
+            No reviews yet. Be the first to review!
+          </Text>
         }
       />
     </View>
@@ -73,7 +79,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    color: '#00796B',
     fontWeight: 'bold',
     marginBottom: 15,
   },
@@ -81,18 +86,10 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   reviewItem: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -101,7 +98,6 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 16,
-    color: '#00796B',
     fontWeight: 'bold',
   },
   ratingContainer: {
@@ -109,17 +105,14 @@ const styles = StyleSheet.create({
   },
   reviewDate: {
     fontSize: 12,
-    color: '#757575',
     marginVertical: 5,
   },
   reviewComment: {
     fontSize: 14,
-    color: '#424242',
     lineHeight: 20,
   },
   noReviewsText: {
     fontSize: 16,
-    color: '#757575',
     textAlign: 'center',
     marginTop: 20,
   },

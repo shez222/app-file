@@ -1,6 +1,6 @@
-// ProductPage.js
+// src/screens/ProductPage.js
 
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -11,19 +11,29 @@ import {
   Modal,
   Dimensions,
   StatusBar,
+  SafeAreaView,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import ReviewPopup from '../components/ReviewPopup'; // Import the ReviewPopup component
+import { LinearGradient } from 'expo-linear-gradient'; // Import LinearGradient
+
+import { ThemeContext } from '../../ThemeContext';
+import { lightTheme, darkTheme } from '../../themes';
 
 const { width } = Dimensions.get('window');
 
 const ProductPage = () => {
   const route = useRoute();
+  const navigation = useNavigation();
   const { item } = route.params;
 
   const [isReviewPopupVisible, setReviewPopupVisible] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Get theme from context
+  const { theme } = useContext(ThemeContext);
+  const currentTheme = theme === 'light' ? lightTheme : darkTheme;
 
   const openReviewPopup = () => {
     setReviewPopupVisible(true);
@@ -37,26 +47,74 @@ const ProductPage = () => {
     setIsFavorite(!isFavorite);
   };
 
+  const handleAddToCart = () => {
+    // Implement your add to cart functionality here
+    Alert.alert('Success', `${item.examName} has been added to your cart.`);
+  };
+
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor="#00695C" barStyle="light-content" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.backgroundColor }]}>
+      <StatusBar
+        backgroundColor={currentTheme.headerBackground[1]}
+        barStyle={theme === 'light' ? 'dark-content' : 'light-content'}
+      />
+      {/* Header */}
+      <LinearGradient
+        colors={currentTheme.headerBackground}
+        style={styles.header}
+        start={[0, 0]}
+        end={[0, 1]} // Horizontal gradient
+      >
+        {/* Back Button */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Go Back"
+          accessibilityRole="button"
+        >
+          <Ionicons name="arrow-back" size={28} color={currentTheme.headerTextColor} />
+        </TouchableOpacity>
+
+        {/* Header Title */}
+        <View style={styles.headerTitleContainer}>
+          <Text style={[styles.headerTitle, { color: currentTheme.headerTextColor }]}>
+            {item.examName}
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: currentTheme.headerTextColor }]}>
+            {item.subjectName} ({item.subjectCode})
+          </Text>
+        </View>
+      </LinearGradient>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Product Image */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: item.image }} style={styles.productImage} />
-          <TouchableOpacity style={styles.favoriteButton} onPress={toggleFavorite}>
+          {/* Favorite Button */}
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={toggleFavorite}
+            accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            accessibilityRole="button"
+          >
             <Ionicons
               name={isFavorite ? 'heart' : 'heart-outline'}
               size={28}
-              color="#FF5252"
+              color={isFavorite ? '#E91E63' : currentTheme.placeholderTextColor}
             />
           </TouchableOpacity>
         </View>
-        <View style={styles.detailsContainer}>
-          <Text style={styles.productTitle}>{item.examName}</Text>
-          <Text style={styles.productSubtitle}>
+
+        {/* Product Details */}
+        <View style={[styles.detailsContainer, { backgroundColor: currentTheme.cardBackground }]}>
+          <Text style={[styles.productTitle, { color: currentTheme.cardTextColor }]}>
+            {item.examName}
+          </Text>
+          <Text style={[styles.productSubtitle, { color: currentTheme.textColor }]}>
             {item.subjectName} ({item.subjectCode})
           </Text>
 
+          {/* Rating */}
           <View style={styles.ratingContainer}>
             {Array.from({ length: 5 }, (_, index) => (
               <Ionicons
@@ -67,17 +125,33 @@ const ProductPage = () => {
               />
             ))}
             <TouchableOpacity onPress={openReviewPopup}>
-              <Text style={styles.reviewCount}> ({item.reviews} reviews)</Text>
+              <Text style={[styles.reviewCount, { color: currentTheme.secondaryColor }]}>
+                {' '}
+                ({item.reviews} reviews)
+              </Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.productPrice}>${item.price}</Text>
+          {/* Price */}
+          <Text style={[styles.productPrice, { color: currentTheme.priceColor }]}>
+            ${item.price}
+          </Text>
 
-          <Text style={styles.sectionTitle}>Description</Text>
-          <Text style={styles.productDescription}>{item.description}</Text>
+          {/* Description */}
+          <Text style={[styles.sectionTitle, { color: currentTheme.cardTextColor }]}>
+            Description
+          </Text>
+          <Text style={[styles.productDescription, { color: currentTheme.textColor }]}>
+            {item.description}
+          </Text>
 
           {/* Add to Cart Button */}
-          <TouchableOpacity style={styles.addToCartButton}>
+          <TouchableOpacity
+            style={[styles.addToCartButton, { backgroundColor: currentTheme.primaryColor }]}
+            onPress={handleAddToCart}
+            accessibilityLabel="Add to Cart"
+            accessibilityRole="button"
+          >
             <MaterialIcons name="add-shopping-cart" size={24} color="#FFFFFF" />
             <Text style={styles.addToCartButtonText}>Add to Cart</Text>
           </TouchableOpacity>
@@ -93,21 +167,58 @@ const ProductPage = () => {
           <ReviewPopup closePopup={closeReviewPopup} productId={item.id} />
         </Modal>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
+// Styles for the components
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    width: '100%',
+    paddingVertical: 5,
+    paddingHorizontal: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Elevation for Android
+    elevation: 4,
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  backButton: {
+    position: 'absolute',
+    left: 15,
+    top: 10,
+    padding: 8,
+    // borderRadius: 20, // Make it circular
+    // backgroundColor: 'rgba(255, 255, 255, 0.3)', // Semi-transparent background
+  },
+  headerTitleContainer: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    fontWeight: '400',
+    marginTop: 4,
   },
   scrollContent: {
     paddingBottom: 20,
   },
   imageContainer: {
     position: 'relative',
-    backgroundColor: '#FFFFFF',
   },
   productImage: {
     width: width,
@@ -124,21 +235,18 @@ const styles = StyleSheet.create({
   },
   detailsContainer: {
     padding: 20,
-    backgroundColor: '#FFFFFF',
     marginTop: -20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     elevation: 5,
   },
   productTitle: {
     fontSize: 26,
-    color: '#00695C',
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontWeight: '700',
+    marginBottom: 5,
   },
   productSubtitle: {
     fontSize: 18,
-    color: '#757575',
     marginBottom: 10,
   },
   ratingContainer: {
@@ -148,36 +256,39 @@ const styles = StyleSheet.create({
   },
   reviewCount: {
     fontSize: 16,
-    color: '#009688',
     marginLeft: 5,
     textDecorationLine: 'underline',
   },
   productPrice: {
     fontSize: 24,
-    color: '#E91E63',
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
-    color: '#00695C',
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 10,
   },
   productDescription: {
     fontSize: 16,
-    color: '#424242',
     lineHeight: 24,
     marginBottom: 30,
   },
   addToCartButton: {
     flexDirection: 'row',
-    backgroundColor: '#009688',
     paddingVertical: 15,
-    borderRadius: 10,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   addToCartButtonText: {
     color: '#FFFFFF',

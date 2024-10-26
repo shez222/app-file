@@ -1,6 +1,6 @@
-// LoginScreen.js
+// src/screens/LoginScreen.js
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { loginUser } from '../services/api';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { ThemeContext } from '../../ThemeContext';
+import { lightTheme, darkTheme } from '../../themes';
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,10 +30,17 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  // Loading state
+  const [loading, setLoading] = useState(false);
+
+  // Get theme from context
+  const { theme } = useContext(ThemeContext);
+  const currentTheme = theme === 'light' ? lightTheme : darkTheme;
+
   // Animation values
   const iconOpacity = useRef(new Animated.Value(0)).current;
   const iconTranslateY = useRef(new Animated.Value(-50)).current;
-  const buttonAnimation = useRef(new Animated.Value(1)).current;
+  const buttonScale = useRef(new Animated.Value(1)).current;
 
   // Function to start the animations
   const startAnimations = () => {
@@ -51,35 +63,29 @@ const LoginScreen = () => {
   }, []);
 
   const handleLogin = async () => {
-    // Animate button press
-    Animated.sequence([
-      Animated.spring(buttonAnimation, {
-        toValue: 0.95,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.spring(buttonAnimation, {
-        toValue: 1,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    navigation.navigate('Otp');
+    navigation.navigate('Main')
+    if (!email || !password) {
+      Alert.alert('Validation Error', 'Please enter both email and password.');
+      return;
+    }
+
+    setLoading(true);
+
     // Simulate login API call
     const response = await loginUser(email, password);
+    setLoading(false);
+
     if (response) {
-      navigation.navigate('Dashboard');
+      navigation.navigate('Main'); // Adjust as per your navigation structure
     } else {
-      Alert.alert('Login failed', 'Please check your credentials and try again.');
+      Alert.alert('Login Failed', 'Invalid email or password.');
     }
   };
 
   return (
-    <ImageBackground
-      source={{ uri: 'https://media.istockphoto.com/id/1350046657/photo/dark-green-defocused-blurred-motion-abstract-background.jpg?s=612x612&w=0&k=20&c=Kdt8O_WEHlQ1ZqSsbM7P76l4uPXS8eqkXJrNMSWs62U=' }} // Replace with an image that matches your theme
-      style={styles.backgroundImage}
+    <LinearGradient
+      colors={theme === 'light' ? ['#ffffff', '#e6f7ff'] : ['#121212', '#1f1f1f']}
+      style={styles.background}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -91,69 +97,141 @@ const LoginScreen = () => {
               opacity: iconOpacity,
               transform: [{ translateY: iconTranslateY }],
               alignItems: 'center',
-              marginBottom: 20,
+              marginBottom: 30,
             }}
           >
-            <Icon name="menu-book" size={100} color="#FFFFFF" />
-            <Text style={styles.title}>StudyApp</Text>
+            <Icon name="login" size={100} color={currentTheme.primaryColor} />
+            <Text style={[styles.title, { color: currentTheme.textColor }]}>
+              Welcome Back
+            </Text>
           </Animated.View>
           <View style={styles.inputContainer}>
-            <TextInput
-              placeholder="Email"
-              placeholderTextColor="#B2DFDB"
-              style={styles.input}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            <TextInput
-              placeholder="Password"
-              placeholderTextColor="#B2DFDB"
-              style={styles.input}
-              secureTextEntry
-              onChangeText={setPassword}
-            />
+            <View style={styles.inputWrapper}>
+              <Icon
+                name="email"
+                size={24}
+                color={currentTheme.placeholderTextColor}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                placeholder="Email"
+                placeholderTextColor={currentTheme.placeholderTextColor}
+                style={[
+                  styles.input,
+                  {
+                    color: currentTheme.textColor,
+                    backgroundColor: currentTheme.inputBackground,
+                  },
+                ]}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                accessibilityLabel="Email Input"
+                returnKeyType="next"
+                onSubmitEditing={() => {
+                  passwordInputRef.current.focus();
+                }}
+                blurOnSubmit={false}
+              />
+            </View>
+            <View style={styles.inputWrapper}>
+              <Icon
+                name="lock"
+                size={24}
+                color={currentTheme.placeholderTextColor}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                ref={passwordInputRef}
+                placeholder="Password"
+                placeholderTextColor={currentTheme.placeholderTextColor}
+                style={[
+                  styles.input,
+                  {
+                    color: currentTheme.textColor,
+                    backgroundColor: currentTheme.inputBackground,
+                  },
+                ]}
+                secureTextEntry
+                onChangeText={setPassword}
+                accessibilityLabel="Password Input"
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
+              />
+            </View>
             <TouchableOpacity
-              style={styles.forgotPasswordButton}
               onPress={() => navigation.navigate('ForgotPassword')}
+              style={styles.forgotPasswordButton}
+              accessibilityLabel="Forgot Password Button"
+              accessibilityRole="button"
             >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Text style={[styles.forgotPasswordText, { color: currentTheme.secondaryColor }]}>
+                Forgot Password?
+              </Text>
             </TouchableOpacity>
           </View>
           <Animated.View
             style={{
-              transform: [{ scale: buttonAnimation }],
+              transform: [{ scale: buttonScale }],
               width: '100%',
               alignItems: 'center',
             }}
           >
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-              <Text style={styles.buttonText}>LOGIN</Text>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                { backgroundColor: currentTheme.primaryColor },
+              ]}
+              onPress={handleLogin}
+              activeOpacity={0.8}
+              accessibilityLabel="Login Button"
+              accessibilityRole="button"
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>LOGIN</Text>
+              )}
             </TouchableOpacity>
           </Animated.View>
           <View style={styles.registerContainer}>
-            <Text style={styles.accountText}>Don't have an account?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerText}> Sign Up</Text>
+            <Text style={[styles.accountText, { color: currentTheme.textColor }]}>
+              Don't have an account?
+            </Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Register')}
+              accessibilityLabel="Sign Up Button"
+              accessibilityRole="button"
+            >
+              <Text
+                style={[
+                  styles.registerText,
+                  { color: currentTheme.secondaryColor },
+                ]}
+              >
+                {' '}
+                Sign Up
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>
-    </ImageBackground>
+    </LinearGradient>
   );
 };
 
+// Create a ref for password input
+const passwordInputRef = React.createRef();
+
 // Styles for the components
 const styles = StyleSheet.create({
-  backgroundImage: {
+  background: {
     flex: 1,
     width: width,
     height: height,
-    resizeMode: 'cover',
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 150, 136, 0.8)', // Semi-transparent teal overlay
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -162,44 +240,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 36,
-    color: '#FFFFFF',
+    fontSize: 32,
     fontWeight: 'bold',
     marginTop: 10,
-    textShadowColor: '#000000',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 5,
   },
   inputContainer: {
     width: '100%',
-    marginTop: 30,
+    marginTop: 20,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: '#d9d9d9',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 15,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    width: '100%',
-    padding: 15,
-    marginVertical: 10,
-    borderColor: '#B2DFDB',
-    borderWidth: 1,
-    borderRadius: 30,
-    color: '#FFFFFF',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    flex: 1,
+    height: 50,
+    fontSize: 16,
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',
-    marginVertical: 5,
+    marginTop: 5,
   },
   forgotPasswordText: {
-    color: '#FFFFFF',
     fontSize: 14,
-    textDecorationLine: 'underline',
   },
   button: {
-    backgroundColor: '#009688',
+    width: '100%',
     paddingVertical: 15,
-    paddingHorizontal: 80,
     borderRadius: 30,
-    marginVertical: 20,
-    elevation: 5,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    marginTop:10
   },
   buttonText: {
     color: '#FFFFFF',
@@ -209,16 +296,294 @@ const styles = StyleSheet.create({
   registerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 20,
   },
   accountText: {
-    color: '#FFFFFF',
     fontSize: 16,
   },
   registerText: {
-    color: '#004D40',
     fontSize: 16,
     fontWeight: 'bold',
   },
 });
 
 export default LoginScreen;
+
+
+
+
+
+
+
+
+
+
+// // LoginScreen.js
+
+// import React, { useState, useEffect, useRef, useContext } from 'react';
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   Alert,
+//   StyleSheet,
+//   Animated,
+//   ImageBackground,
+//   KeyboardAvoidingView,
+//   Platform,
+//   Dimensions,
+// } from 'react-native';
+// import { useNavigation } from '@react-navigation/native';
+// import { loginUser } from '../services/api';
+// import Icon from 'react-native-vector-icons/MaterialIcons';
+
+// import { ThemeContext } from '../../ThemeContext';
+// import { lightTheme, darkTheme } from '../../themes';
+
+// const { width, height } = Dimensions.get('window');
+
+// const LoginScreen = () => {
+//   const navigation = useNavigation();
+//   const [email, setEmail] = useState('');
+//   const [password, setPassword] = useState('');
+
+//   // Get theme from context
+//   const { theme } = useContext(ThemeContext);
+//   const currentTheme = theme === 'light' ? lightTheme : darkTheme;
+
+//   // Animation values
+//   const iconOpacity = useRef(new Animated.Value(0)).current;
+//   const iconTranslateY = useRef(new Animated.Value(-50)).current;
+//   const buttonAnimation = useRef(new Animated.Value(1)).current;
+
+//   // Function to start the animations
+//   const startAnimations = () => {
+//     Animated.parallel([
+//       Animated.timing(iconOpacity, {
+//         toValue: 1,
+//         duration: 1000,
+//         useNativeDriver: true,
+//       }),
+//       Animated.spring(iconTranslateY, {
+//         toValue: 0,
+//         friction: 5,
+//         useNativeDriver: true,
+//       }),
+//     ]).start();
+//   };
+
+//   useEffect(() => {
+//     startAnimations();
+//   }, []);
+
+//   const handleLogin = async () => {
+//     navigation.navigate('Otp'); 
+//     // Animate button press
+//     Animated.sequence([
+//       Animated.spring(buttonAnimation, {
+//         toValue: 0.95,
+//         friction: 3,
+//         tension: 40,
+//         useNativeDriver: true,
+//       }),
+//       Animated.spring(buttonAnimation, {
+//         toValue: 1,
+//         friction: 3,
+//         tension: 40,
+//         useNativeDriver: true,
+//       }),
+//     ]).start();
+
+//     // Simulate login API call
+//     const response = await loginUser(email, password);
+//     if (response) {
+//       navigation.navigate('Main'); // Adjust as per your navigation structure
+//     } else {
+//       Alert.alert('Login failed', 'Please check your credentials and try again.');
+//     }
+//   };
+
+//   return (
+//     <ImageBackground
+//       source={{
+//         uri:
+//           theme === 'light'
+//             ? 'https://media.istockphoto.com/id/1350046657/photo/dark-green-defocused-blurred-motion-abstract-background.jpg'
+//             : 'https://your-dark-theme-image-url', // Replace with your dark theme image URL
+//       }}
+//       style={styles.backgroundImage}
+//     >
+//       <KeyboardAvoidingView
+//         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+//         style={[
+//           styles.overlay,
+//           { backgroundColor: currentTheme.overlayColor },
+//         ]}
+//       >
+//         <View style={styles.container}>
+//           <Animated.View
+//             style={{
+//               opacity: iconOpacity,
+//               transform: [{ translateY: iconTranslateY }],
+//               alignItems: 'center',
+//               marginBottom: 20,
+//             }}
+//           >
+//             <Icon name="menu-book" size={100} color="#FFFFFF" />
+//             <Text style={[styles.title, { color: currentTheme.textColor }]}>
+//               StudyApp
+//             </Text>
+//           </Animated.View>
+//           <View style={styles.inputContainer}>
+//             <TextInput
+//               placeholder="Email"
+//               placeholderTextColor={currentTheme.placeholderTextColor}
+//               style={[
+//                 styles.input,
+//                 {
+//                   color: currentTheme.textColor,
+//                   backgroundColor: currentTheme.cardBackground,
+//                   borderColor: currentTheme.primaryColor,
+//                 },
+//               ]}
+//               onChangeText={setEmail}
+//               autoCapitalize="none"
+//               keyboardType="email-address"
+//             />
+//             <TextInput
+//               placeholder="Password"
+//               placeholderTextColor={currentTheme.placeholderTextColor}
+//               style={[
+//                 styles.input,
+//                 {
+//                   color: currentTheme.textColor,
+//                   backgroundColor: currentTheme.cardBackground,
+//                   borderColor: currentTheme.primaryColor,
+//                 },
+//               ]}
+//               secureTextEntry
+//               onChangeText={setPassword}
+//             />
+//             <TouchableOpacity
+//               style={styles.forgotPasswordButton}
+//               onPress={() => navigation.navigate('ForgotPassword')}
+//             >
+//               <Text
+//                 style={[
+//                   styles.forgotPasswordText,
+//                   { color: currentTheme.secondaryColor },
+//                 ]}
+//               >
+//                 Forgot Password?
+//               </Text>
+//             </TouchableOpacity>
+//           </View>
+//           <Animated.View
+//             style={{
+//               transform: [{ scale: buttonAnimation }],
+//               width: '100%',
+//               alignItems: 'center',
+//             }}
+//           >
+//             <TouchableOpacity
+//               style={[
+//                 styles.button,
+//                 { backgroundColor: currentTheme.primaryColor },
+//               ]}
+//               onPress={handleLogin}
+//             >
+//               <Text style={styles.buttonText}>LOGIN</Text>
+//             </TouchableOpacity>
+//           </Animated.View>
+//           <View style={styles.registerContainer}>
+//             <Text style={[styles.accountText, { color: currentTheme.textColor }]}>
+//               Don't have an account?
+//             </Text>
+//             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+//               <Text
+//                 style={[
+//                   styles.registerText,
+//                   { color: currentTheme.secondaryColor },
+//                 ]}
+//               >
+//                 {' '}
+//                 Sign Up
+//               </Text>
+//             </TouchableOpacity>
+//           </View>
+//         </View>
+//       </KeyboardAvoidingView>
+//     </ImageBackground>
+//   );
+// };
+
+// // Styles for the components
+// const styles = StyleSheet.create({
+//   backgroundImage: {
+//     flex: 1,
+//     width: width,
+//     height: height,
+//     resizeMode: 'cover',
+//   },
+//   overlay: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//   },
+//   container: {
+//     width: '85%',
+//     alignItems: 'center',
+//   },
+//   title: {
+//     fontSize: 36,
+//     fontWeight: 'bold',
+//     marginTop: 10,
+//     textShadowColor: '#000000',
+//     textShadowOffset: { width: 0, height: 1 },
+//     textShadowRadius: 5,
+//   },
+//   inputContainer: {
+//     width: '100%',
+//     marginTop: 30,
+//   },
+//   input: {
+//     width: '100%',
+//     padding: 15,
+//     marginVertical: 10,
+//     borderWidth: 1,
+//     borderRadius: 30,
+//   },
+//   forgotPasswordButton: {
+//     alignSelf: 'flex-end',
+//     marginVertical: 5,
+//   },
+//   forgotPasswordText: {
+//     fontSize: 14,
+//   },
+//   button: {
+//     paddingVertical: 15,
+//     paddingHorizontal: 80,
+//     borderRadius: 30,
+//     marginVertical: 20,
+//     elevation: 5,
+//   },
+//   buttonText: {
+//     color: '#FFFFFF',
+//     fontSize: 18,
+//     fontWeight: 'bold',
+//   },
+//   registerContainer: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//   },
+//   accountText: {
+//     fontSize: 16,
+//   },
+//   registerText: {
+//     fontSize: 16,
+//     fontWeight: 'bold',
+//   },
+// });
+
+// export default LoginScreen;
